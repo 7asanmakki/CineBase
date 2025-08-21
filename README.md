@@ -1,19 +1,23 @@
-# 🎬 Movie Database
+# Movie Database
 
-A movie search and detail app built with React, JavaScript, and CSS.
 
-## Features
-- Search movies
-- View details
-- Save favorites (planned)
+A simple movie search and details app built with React + Vite. Search by title, view details, and save favorites.
 
-## Tech Stack
-- React
-- Vite
-- JavaScript
-- CSS
 
-## Getting Started
+## ✨ Features
+- 🔎 Search movies by title
+- 📄 Movie details page (title, poster, year, plot, rating)
+- ⭐ Favorites (localStorage)
+- ♻️ Pagination / Load more (if implemented)
+- 🧪 Tests with Vitest + React Testing Library
+
+
+## 🧰 Tech Stack
+- React 18, Vite, JavaScript (or TypeScript)
+- CSS or Tailwind
+
+
+## 🚀 Getting Started
 ```bash
 npm install
 npm run dev
