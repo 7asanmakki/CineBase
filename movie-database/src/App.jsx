@@ -1,95 +1,50 @@
-import { useState, useEffect } from "react";
-import ThemeToggle from "./components/ThemeToggle";
-import MovieCard from "./components/MovieCard";
-import SkeletonCard from "./components/SkeletonCard";
-import "./App.css";
+import { Routes, Route } from "react-router-dom";
+import { useEffect, useState } from "react";
+import Navbar from "./components/Navbar.jsx";
+import Home from "./pages/Home.jsx";
+import Favorites from "./pages/Favorites.jsx";
+import MovieDetails from "./pages/MovieDetails.jsx";
 
-const API_KEY = "fe0ea1ba99123d90bdb177714b8c7cd8";
-const BASE_URL = "https://api.themoviedb.org/3";
-
-<h1 className="app-title">CineBase</h1>
-
-function App() {
-  const [movies, setMovies] = useState([]);
-  const [query, setQuery] = useState("Avengers");
-  const [loading, setLoading] = useState(true);
-  const [favorites, setFavorites] = useState([]);
+export default function App() {
+  const [favorites, setFavorites] = useState(() => {
+    try {
+      const raw = localStorage.getItem("cinebase_favorites");
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
 
   useEffect(() => {
-    fetchMovies(query);
-  }, []);
-
-  const fetchMovies = async (searchQuery) => {
     try {
-      setLoading(true);
-      const response = await fetch(
-        `${BASE_URL}/search/movie?api_key=${API_KEY}&query=${searchQuery}`
-      );
-      const data = await response.json();
-      setMovies(data.results || []);
-    } catch (error) {
-      console.error("Error fetching movies:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      localStorage.setItem("cinebase_favorites", JSON.stringify(favorites));
+    } catch {}
+  }, [favorites]);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    fetchMovies(query);
-  };
-
-  const handleFavoriteToggle = (movie) => {
+  const toggleFavorite = (movie) => {
     setFavorites((prev) =>
-      prev.some((fav) => fav.id === movie.id)
-        ? prev.filter((fav) => fav.id !== movie.id)
+      prev.some((m) => m.id === movie.id)
+        ? prev.filter((m) => m.id !== movie.id)
         : [...prev, movie]
     );
   };
 
   return (
-    <div className="app">
-      {/* Header */}
-      <header className="header">
-        <h1 className="logo"> CineBase</h1>
-        <ThemeToggle />
-      </header>
-
-      {/* Search Bar */}
-      <section className="search-section">
-        <form onSubmit={handleSearch} className="search-form">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search for a movie..."
-            className="search-input"
+    <>
+      <Navbar favoritesCount={favorites.length} />
+      <main>
+        <Routes>
+          <Route
+            path="/"
+            element={<Home favorites={favorites} onFavoriteToggle={toggleFavorite} />}
           />
-          <button type="submit" className="search-button">
-            Search
-          </button>
-        </form>
-      </section>
-
-      {/* Movies Grid */}
-      <main className="movies-grid">
-        {loading
-          ? [...Array(8)].map((_, i) => <SkeletonCard key={i} />)
-          : movies.length > 0
-          ? movies.map((movie) => (
-              <MovieCard
-                key={movie.id}
-                movie={movie}
-                isFavorited={favorites.some((fav) => fav.id === movie.id)}
-                onFavoriteToggle={handleFavoriteToggle}
-              />
-            ))
-          : (
-            <p className="no-movies">No movies found 😢</p>
-          )}
+          <Route
+            path="/favorites"
+            element={<Favorites favorites={favorites} onFavoriteToggle={toggleFavorite} />}
+          />
+          <Route path="/movie/:id" element={<MovieDetails onFavoriteToggle={toggleFavorite} favorites={favorites} />} />
+        </Routes>
       </main>
-    </div>
+    </>
   );
 }
-
-export default App;

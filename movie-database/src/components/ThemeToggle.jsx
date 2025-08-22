@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 
 export default function ThemeToggle() {
-  const [isDark, setIsDark] = useState(
-    localStorage.getItem("theme") === "dark" ||
-      document.documentElement.classList.contains("dark")
-  );
+  const [isDark, setIsDark] = useState(() => {
+    try {
+      return localStorage.getItem("theme") === "dark" || document.documentElement.classList.contains("dark");
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     if (isDark) {
@@ -17,10 +20,7 @@ export default function ThemeToggle() {
   }, [isDark]);
 
   return (
-    <button
-      onClick={() => setIsDark((d) => !d)}
-      className="theme-toggle"
-    >
+    <button className="theme-toggle" onClick={() => setIsDark((d) => !d)}>
       {isDark ? "☀️ Light" : "🌙 Dark"}
     </button>
   );
