@@ -1,35 +1,95 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, useEffect } from "react";
+import ThemeToggle from "./components/ThemeToggle";
+import MovieCard from "./components/MovieCard";
+import SkeletonCard from "./components/SkeletonCard";
+import "./App.css";
+
+const API_KEY = "fe0ea1ba99123d90bdb177714b8c7cd8";
+const BASE_URL = "https://api.themoviedb.org/3";
+
+<h1 className="app-title">CineBase</h1>
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [movies, setMovies] = useState([]);
+  const [query, setQuery] = useState("Avengers");
+  const [loading, setLoading] = useState(true);
+  const [favorites, setFavorites] = useState([]);
+
+  useEffect(() => {
+    fetchMovies(query);
+  }, []);
+
+  const fetchMovies = async (searchQuery) => {
+    try {
+      setLoading(true);
+      const response = await fetch(
+        `${BASE_URL}/search/movie?api_key=${API_KEY}&query=${searchQuery}`
+      );
+      const data = await response.json();
+      setMovies(data.results || []);
+    } catch (error) {
+      console.error("Error fetching movies:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    fetchMovies(query);
+  };
+
+  const handleFavoriteToggle = (movie) => {
+    setFavorites((prev) =>
+      prev.some((fav) => fav.id === movie.id)
+        ? prev.filter((fav) => fav.id !== movie.id)
+        : [...prev, movie]
+    );
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div className="app">
+      {/* Header */}
+      <header className="header">
+        <h1 className="logo"> CineBase</h1>
+        <ThemeToggle />
+      </header>
+
+      {/* Search Bar */}
+      <section className="search-section">
+        <form onSubmit={handleSearch} className="search-form">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search for a movie..."
+            className="search-input"
+          />
+          <button type="submit" className="search-button">
+            Search
+          </button>
+        </form>
+      </section>
+
+      {/* Movies Grid */}
+      <main className="movies-grid">
+        {loading
+          ? [...Array(8)].map((_, i) => <SkeletonCard key={i} />)
+          : movies.length > 0
+          ? movies.map((movie) => (
+              <MovieCard
+                key={movie.id}
+                movie={movie}
+                isFavorited={favorites.some((fav) => fav.id === movie.id)}
+                onFavoriteToggle={handleFavoriteToggle}
+              />
+            ))
+          : (
+            <p className="no-movies">No movies found 😢</p>
+          )}
+      </main>
+    </div>
+  );
 }
 
-export default App
+export default App;
