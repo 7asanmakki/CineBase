@@ -79,6 +79,7 @@ html.dark .theme-toggle{ background:#333; color:#fff; }
 
 /* ---------- CARD (must stretch to fill its grid column) ---------- */
 .movie-card {
+  position: relative; /* <-- ADDED */
   display: block;
   width: 100%;
   max-width: none;     /* <— IMPORTANT: no fixed cap */
@@ -91,6 +92,7 @@ html.dark .theme-toggle{ background:#333; color:#fff; }
   color: inherit;
   text-decoration: none;
 }
+
 
 .movie-card:hover {
   transform: translateY(-6px);

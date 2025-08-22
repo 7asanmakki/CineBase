@@ -1,5 +1,6 @@
+// src/App.jsx
 import { Routes, Route } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Navbar from "./components/Navbar.jsx";
 import Home from "./pages/Home.jsx";
 import Favorites from "./pages/Favorites.jsx";
@@ -21,13 +22,13 @@ export default function App() {
     } catch {}
   }, [favorites]);
 
-  const toggleFavorite = (movie) => {
+  const toggleFavorite = useCallback((movie) => {
     setFavorites((prev) =>
       prev.some((m) => m.id === movie.id)
         ? prev.filter((m) => m.id !== movie.id)
         : [...prev, movie]
     );
-  };
+  }, []);
 
   return (
     <>
@@ -42,7 +43,10 @@ export default function App() {
             path="/favorites"
             element={<Favorites favorites={favorites} onFavoriteToggle={toggleFavorite} />}
           />
-          <Route path="/movie/:id" element={<MovieDetails onFavoriteToggle={toggleFavorite} favorites={favorites} />} />
+          <Route
+            path="/movie/:id"
+            element={<MovieDetails onFavoriteToggle={toggleFavorite} favorites={favorites} />}
+          />
         </Routes>
       </main>
     </>

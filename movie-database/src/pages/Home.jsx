@@ -1,8 +1,9 @@
+// src/pages/Home.jsx
 import { useState, useEffect } from "react";
 import MovieCard from "../components/MovieCard";
 import SkeletonCard from "../components/SkeletonCard";
 
-const API_KEY = "fe0ea1ba99123d90bdb177714b8c7cd8";
+const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 const BASE_URL = "https://api.themoviedb.org/3";
 
 // 🚫 blacklist words to block porn/erotic content
@@ -21,10 +22,10 @@ const BLOCKED_KEYWORDS = [
   "seduction",
 ];
 
-// 🚫 blacklist exact titles (like Bad Guys 2) - Poster issue from THE API Source
+// 🚫 blacklist exact titles (lowercased)
 const BLOCKED_TITLES = ["the bad guys 2"];
 
-export default function Home() {
+export default function Home({ favorites = [], onFavoriteToggle }) {
   const [sections, setSections] = useState({
     trending: [],
     topRated: [],
@@ -37,11 +38,12 @@ export default function Home() {
   const cleanMovies = (movies) => {
     if (!movies) return [];
     return movies.filter((m) => {
+      // guard title usage
+      const title = (m.title || "").toLowerCase();
       if (!m.poster_path) return false; // skip missing/black posters
       if (m.adult) return false;
-      if (BLOCKED_TITLES.includes(m.title.toLowerCase())) return false;
-      if (BLOCKED_KEYWORDS.some((word) => m.title.toLowerCase().includes(word)))
-        return false;
+      if (BLOCKED_TITLES.includes(title)) return false;
+      if (BLOCKED_KEYWORDS.some((word) => title.includes(word))) return false;
       return true;
     });
   };
@@ -74,13 +76,16 @@ export default function Home() {
           ),
         ]);
 
-      const [trending, topRated, action, drama, anime] = await Promise.all([
-        trendingRes.json(),
-        topRatedRes.json(),
-        actionRes.json(),
-        dramaRes.json(),
-        animeRes.json(),
-      ]);
+      // check responses (partial failure handling)
+      const responses = [trendingRes, topRatedRes, actionRes, dramaRes, animeRes];
+      const jsons = await Promise.all(
+        responses.map(async (r) => {
+          if (!r.ok) return { results: [] };
+          return r.json();
+        })
+      );
+
+      const [trending, topRated, action, drama, anime] = jsons;
 
       setSections({
         trending: cleanMovies(trending.results),
@@ -105,10 +110,13 @@ export default function Home() {
 
   useEffect(() => {
     fetchSections();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const isMovieFavorited = (movie) => favorites.some((f) => f.id === movie.id);
+
   const renderSection = (title, movies) => (
-    <section className="movie-section">
+    <section className="movie-section" key={title}>
       <h2 className="section-title">{title}</h2>
       <div className="scroll-row">
         {loading ? (
@@ -122,6 +130,8 @@ export default function Home() {
                 poster_path:
                   movie.poster_path || movie.backdrop_path || "/fallback-poster.jpg",
               }}
+              onFavoriteToggle={onFavoriteToggle}
+              isFavorited={isMovieFavorited(movie)}
             />
           ))
         ) : (
