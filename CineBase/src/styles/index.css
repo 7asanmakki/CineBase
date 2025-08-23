@@ -1,0 +1,178 @@
+/* ========== Tailwind base layers ========== */
+@import "tailwindcss";
+
+:root {
+  --bg: #f4f4f4;
+  --text: #222;
+  --card: #fff;
+  --muted: #6b7280;
+  --brand: #ff4757;
+  --nav: #111;
+}
+
+html.dark {
+  --bg: #121212;
+  --text: #f4f4f4;
+  --card: #1e1e1e;
+  --muted: #c7c7c7;
+  --nav: #000;
+}
+
+* {
+  box-sizing: border-box;
+}
+html, body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  transition: background .25s, color .25s;
+}
+
+/* ========== Navbar ========== */
+.navbar {
+  @apply sticky top-0 z-50 flex items-center justify-between px-5 py-3 shadow-md;
+  background: var(--nav);
+  color: #fff;
+}
+.nav-left { @apply flex items-center gap-3; }
+.logo { @apply text-xl font-extrabold no-underline text-white; }
+.nav-links { @apply flex gap-4 list-none m-0 p-0 items-center; }
+.nav-links a {
+  @apply font-semibold no-underline px-1.5 py-1 rounded;
+  color: #fff;
+  opacity: .95;
+}
+.nav-links a:hover,
+.nav-links .active {
+  background: rgba(255,255,255,0.05);
+  color: #ffd08a;
+}
+
+/* ========== Theme Toggle ========== */
+.theme-toggle {
+  @apply px-3 py-2 font-bold rounded-md cursor-pointer border-0;
+  background: #ddd;
+  color: #222;
+  transition: filter .15s;
+}
+html.dark .theme-toggle { background: #333; color: #fff; }
+.theme-toggle:hover { filter: brightness(1.05); }
+
+/* ========== Search ========== */
+.search-section { @apply flex justify-center px-5 py-4; }
+.search-form { @apply flex w-full max-w-2xl gap-0; }
+.search-input {
+  @apply flex-1 px-3 py-2 text-base outline-none rounded-l-lg;
+  border: 1px solid #d1d5db;
+  border-right: 0;
+  background: var(--card);
+  color: var(--text);
+}
+.search-input:focus {
+  box-shadow: 0 0 0 4px rgba(0,123,255,.08);
+  border-color: #007bff;
+}
+.search-button {
+  @apply px-5 py-2 font-bold text-white cursor-pointer rounded-r-lg border-0;
+  background: #007bff;
+}
+.search-button:hover { filter: brightness(1.03); }
+
+/* ========== Grid ========== */
+.movies-grid {
+  @apply grid gap-5 p-5 justify-items-stretch justify-center;
+  grid-template-columns: repeat(2, 1fr);
+}
+@media (min-width: 640px) { .movies-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 900px) { .movies-grid { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 1100px) { .movies-grid { grid-template-columns: repeat(8, 1fr); } }
+
+/* ========== Movie Card ========== */
+.movie-card {
+  @apply block w-full rounded-xl overflow-hidden shadow transition duration-200 ease-in-out no-underline;
+  position: relative;
+  background: var(--card);
+  color: inherit;
+}
+.movie-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 10px 24px rgba(0,0,0,.12);
+}
+.movie-poster {
+  @apply w-full block;
+  height: 260px;
+  object-fit: cover;
+}
+.movie-info { @apply px-3 pb-4 pt-2 text-center; }
+.movie-info h3 { @apply text-base font-semibold mb-1; }
+.movie-info p { @apply text-sm; color: var(--muted); }
+
+/* Overlay + Favorite Btn */
+.overlay {
+  @apply flex items-end justify-center transition-opacity;
+  pointer-events: none;
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,.45), transparent 60%);
+  opacity: 0;
+}
+.movie-card:hover .overlay { opacity: 1; pointer-events: auto; }
+.favorite-btn {
+  @apply mb-3 px-3 py-2 font-extrabold rounded-md cursor-pointer border-0;
+  background: #fff; color: #222;
+}
+.favorite-btn.add { background: #ffb84d; color: #111; }
+.favorite-btn.remove { background: #ff6b6b; color: #fff; }
+html.dark .favorite-btn { background: #333; color: #fff; }
+
+/* ========== Skeletons ========== */
+.skeleton-card { @apply rounded-xl p-2; background: var(--card); max-width: 200px; }
+.skeleton { @apply rounded bg-gray-300 animate-pulse; }
+.skeleton.poster { height: 260px; }
+.skeleton.title { height: 14px; width: 70%; margin-top: 10px; }
+.skeleton.date { height: 12px; width: 50%; margin-top: 8px; }
+
+/* Placeholder */
+.movie-card.placeholder { background: transparent; box-shadow: none; pointer-events: none; }
+.placeholder-poster { width: 100%; height: 260px; background: transparent; }
+
+/* ========== Movie Details ========== */
+.movie-details { @apply max-w-6xl mx-auto p-7; color: var(--text); }
+.movie-details-content { @apply flex gap-7 items-start; }
+.movie-details-poster { @apply rounded-xl shadow-lg; width: 320px; max-width: 40vw; }
+.movie-details-info { @apply flex-1; }
+.movie-details-info h2 { @apply text-2xl font-bold mb-3; }
+/* allow details paragraphs to inherit color so Tailwind classes work in both modes */
+.movie-details-info p { @apply my-2 leading-relaxed; color: inherit; }
+.back-button {
+  @apply mb-3 px-4 py-2 font-bold text-white rounded-full cursor-pointer border-0 shadow;
+  background: #1c1c1c;
+}
+.back-button:hover { background: var(--brand); transform: translateY(-1px); }
+
+/* Responsive */
+@media (max-width: 920px) {
+  .movie-details-content { @apply flex-col items-center text-center; }
+  .movie-details-poster { width: min(360px, 90vw); }
+}
+@media (max-width: 480px) {
+  .movies-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; padding: 16px; }
+  .movie-poster { height: 220px; }
+  .movie-card { max-width: 170px; }
+}
+
+/* ========== Horizontal Sections ========== */
+.movie-section { @apply my-8 px-5; }
+.section-title { @apply text-xl font-extrabold mb-3; }
+.scroll-row {
+  @apply flex gap-4 overflow-x-auto pb-2;
+  scrollbar-width: thin;
+}
+.scroll-row::-webkit-scrollbar { height: 8px; }
+.scroll-row::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+.scroll-row::-webkit-scrollbar-thumb:hover { background: #555; }
+.scroll-row .movie-card { flex: 0 0 180px; }
+.scroll-row .movie-poster { height: 260px; }

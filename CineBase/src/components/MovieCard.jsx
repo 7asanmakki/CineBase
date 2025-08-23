@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useRef } from "react";
+import { useRef, useCallback } from "react";
 
 export default function MovieCard({ movie, onFavoriteToggle, isFavorited }) {
   const { title, release_date, poster_path, id } = movie;
@@ -7,7 +7,7 @@ export default function MovieCard({ movie, onFavoriteToggle, isFavorited }) {
 
   const imgRef = useRef(null);
 
-  const checkIfBlack = (e) => {
+  const checkIfBlack = useCallback((e) => {
     const img = e.currentTarget;
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
@@ -27,10 +27,13 @@ export default function MovieCard({ movie, onFavoriteToggle, isFavorited }) {
     if (brightness < 10) {
       img.src = `https://placehold.co/400x600?text=No+Image`;
     }
-  };
+  }, []);
 
   return (
-    <Link to={`/movie/${id}`} className="movie-card">
+    <Link
+      to={`/movie/${id}`}
+      className="relative block overflow-hidden rounded-lg shadow-md hover:shadow-xl transition"
+    >
       <img
         ref={imgRef}
         src={
@@ -40,25 +43,29 @@ export default function MovieCard({ movie, onFavoriteToggle, isFavorited }) {
         }
         alt={title || "Untitled"}
         loading="lazy"
-        className="movie-poster"
+        className="w-full h-auto object-cover"
         onError={(e) => {
           e.currentTarget.src = `https://placehold.co/400x600?text=No+Image`;
         }}
-        onLoad={checkIfBlack} 
+        onLoad={checkIfBlack}
       />
 
-      <div className="movie-info">
-        <h3>{title}</h3>
-        <p>{release_date || "Unknown"}</p>
+      <div className="p-2 bg-white dark:bg-gray-800">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+          {title}
+        </h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          {release_date || "Unknown"}
+        </p>
       </div>
 
-      <div className="overlay">
+      <div className="absolute inset-0 flex items-end justify-center bg-black/50 opacity-0 hover:opacity-100 transition">
         <button
           onClick={(e) => {
             e.preventDefault();
             onFavoriteToggle?.(movie);
           }}
-          className="favorite-btn"
+          className="mb-2 rounded bg-yellow-400 px-3 py-1 text-sm font-medium text-black hover:bg-yellow-500"
         >
           {isFavorited ? "★ Favorited" : "☆ Favorite"}
         </button>
