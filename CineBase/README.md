@@ -3,7 +3,7 @@
 ## 📖 Overview
 
 **CineBase** is a modern, responsive Movie Database Web Application built with **React + Vite**.  
-It allows users to search, browse, and explore movies with rich details, trailers, and a beautiful dark-themed UI inspired by the CineBase logo colors (red, white, black).
+It allows users to search, browse, and explore movies with rich details, trailers, and a beautiful dark-themed UI inspired by the CineBase logo colors (red, white, black). CineBase is deployed live at [cinebase-three.vercel.app](https://cinebase-three.vercel.app/).
 
 ---
 
@@ -58,7 +58,7 @@ It allows users to search, browse, and explore movies with rich details, trailer
 
 1. Clone the repo and install dependencies:
    ```bash
-   git clone https://github.com/yourusername/cinebase.git
+   git clone https://github.com/7asanmakki/movie-database
    cd cinebase
    npm install
    ```
@@ -72,6 +72,15 @@ It allows users to search, browse, and explore movies with rich details, trailer
    npm run dev
    ```
 4. Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+## Deployment
+
+CineBase is deployed on [Vercel](https://vercel.com/). To deploy your own version:
+
+1. Push your code to GitHub.
+2. Import the repo into Vercel.
+3. Set the `VITE_TMDB_API_KEY` environment variable in Vercel dashboard.
+4. Deploy!
 
 ---
 
@@ -89,16 +98,20 @@ It allows users to search, browse, and explore movies with rich details, trailer
 
 - **Hasan Makki** – Project lead, frontend, API integration, UI/UX
 
+
 ---
 
 ## 📝 Notes
 
 - **Dark mode only:** The app always uses dark mode for a cinematic experience.
-- **Brand colors:** Red, white, and black are used throughout for a cohesive look.
-- **No light mode or theme toggle:** The toggle has been removed for simplicity.
+- **Brand colors:** Black and blue are used throughout for a cohesive look.
 - **Trailers:** YouTube trailers are embedded when available.
+- **Favorites:** Persisted in localStorage for a personal touch.
+- **Optimized Search:** You can search with your language, search with filter by year, and search with suggestions.
 - **Favorites:** Persisted in localStorage for a personal touch.
 - **Blacklist:** Adult and unwanted content is filtered out for safety.
 
 ---
+
+> Built with ❤️ for movie lovers.
 
