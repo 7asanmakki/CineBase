@@ -32,7 +32,8 @@ export default function Home({ favorites = [], onFavoriteToggle }) {
     topRated: [],
     action: [],
     drama: [],
-    anime: [],
+    cartoons: [], // renamed from anime -> cartoons (US Animation / Cartoons)
+    anime: [],    // NEW: dedicated Japanese anime section
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState({ isError: false, message: "", type: "" });
@@ -55,24 +56,28 @@ export default function Home({ favorites = [], onFavoriteToggle }) {
       setLoading(true);
       setError({ isError: false, message: "", type: "" });
       
-      // Prepare all fetch promises
+      // Prepare all fetch promises (now 6 endpoints: trending, topRated, action, drama, cartoons (US), anime (JP))
       const endpoints = [
         fetchWithRetry('/discover/movie', { primary_release_year: '2025', sort_by: 'popularity.desc', language: 'en-US', page: 1 }),
         fetchWithRetry('/movie/top_rated', { language: 'en-US', page: 1 }),
         fetchWithRetry('/discover/movie', { with_genres: '28', sort_by: 'popularity.desc', language: 'en-US', page: 1 }),
         fetchWithRetry('/discover/movie', { with_genres: '18', with_original_language: 'en', sort_by: 'popularity.desc', language: 'en-US', page: 1 }),
-        fetchWithRetry('/discover/movie', { with_genres: '16,10751', sort_by: 'popularity.desc', language: 'en-US', page: 1 })
+        // Cartoons & Animation (US / English original)
+        fetchWithRetry('/discover/movie', { with_genres: '16,10751', with_original_language: 'en', sort_by: 'popularity.desc', language: 'en-US', page: 1 }),
+        // Anime (Japanese original language, animation genre)
+        fetchWithRetry('/discover/movie', { with_genres: '16', with_original_language: 'ja', sort_by: 'popularity.desc', language: 'en-US', page: 1 })
       ];
       
       // Execute in parallel
-      const [trending, topRated, action, drama, anime] = await Promise.all(endpoints);
+      const [trending, topRated, action, drama, cartoons, anime] = await Promise.all(endpoints);
       
       setSections({
         trending: cleanMovies(trending.results),
         topRated: cleanMovies(topRated.results),
         action: cleanMovies(action.results),
         drama: cleanMovies(drama.results),
-        anime: cleanMovies(anime.results),
+        cartoons: cleanMovies(cartoons.results), // US cartoons & animations
+        anime: cleanMovies(anime.results),       // Japanese anime
       });
     } catch (error) {
       console.error("Error fetching homepage sections:", error);
@@ -98,6 +103,7 @@ export default function Home({ favorites = [], onFavoriteToggle }) {
         topRated: [],
         action: [],
         drama: [],
+        cartoons: [],
         anime: [],
       });
     } finally {
@@ -177,7 +183,8 @@ export default function Home({ favorites = [], onFavoriteToggle }) {
       {renderSection("👑 Most Viewed of All Time", sections.topRated)}
       {renderSection("💥 Action Movies", sections.action)}
       {renderSection("🎭 Drama Movies", sections.drama)}
-      {renderSection("🎌 Anime & Cartoons", sections.anime)}
+      {renderSection("🎨 Cartoon & Animation", sections.cartoons)}
+      {renderSection("🎌 Anime", sections.anime)}
     </div>
   );
 }

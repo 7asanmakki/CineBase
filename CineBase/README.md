@@ -3,17 +3,18 @@
 ## 📖 Overview
 
 **CineBase** is a modern, responsive Movie Database Web Application built with **React + Vite**.  
-It allows users to search, browse, and explore movies with rich details, trailers, and a beautiful dark-themed UI inspired by the CineBase logo colors (red, white, black). CineBase is deployed live at [cinebase-three.vercel.app](https://cinebase-three.vercel.app/).
+It allows users to search, browse, and explore movies with rich details, trailers, and a beautiful dark-themed UI.
+CineBase is deployed live at [cinebase-three.vercel.app](https://cinebase-three.vercel.app/).
 
 ---
 
 ## 🚀 Features
 
 ### 🎨 UI/UX & Design
-- **Dark Mode Only:** The entire app uses a sleek dark theme with a red/white/black palette matching the CineBase logo.
+- **Dark Mode Only:** The entire app uses a sleek dark theme for a cinematic experience.
 - **CineBase Logo:** Custom SVG logo in the navbar for brand identity.
 - **Responsive Design:** Fully optimized for desktop, tablet, and mobile.
-- **Flexible Navbar:** Improved navigation bar with better spacing, alignment, and logo integration.
+- **Flexible Navbar:** Improved navigation bar with better spacing, and alignment.
 - **Consistent Card Layouts:** Movie cards and details are visually consistent and responsive.
 
 ### 🔍 Search & Discovery
@@ -36,7 +37,7 @@ It allows users to search, browse, and explore movies with rich details, trailer
 - **Favorites Page:** View and manage your favorite movies in a grid layout.
 
 ### ⚡ Performance & Quality
-- **API Integration:** Uses TMDB API for movie data and OMDB for extra ratings.
+- **API Integration:** Uses TMDB API for movie data.
 - **Loading Skeletons:** Animated placeholders for fast, smooth loading.
 - **Blacklist Filtering:** Adult/erotic content and unwanted titles are filtered out.
 - **Robust Error Boundaries:** Prevents crashes and shows helpful fallback UI.
@@ -46,7 +47,7 @@ It allows users to search, browse, and explore movies with rich details, trailer
 ## 🛠️ Tech Stack
 
 - **React (Vite)**
-- **TMDB API** & **OMDB API**
+- **TMDB API** 
 - **Tailwind CSS** (with custom variables for CineBase palette)
 - **Zustand** (for state management)
 - **JavaScript (ES6+)**
@@ -107,7 +108,7 @@ CineBase is deployed on [Vercel](https://vercel.com/). To deploy your own versio
 - **Brand colors:** Black and blue are used throughout for a cohesive look.
 - **Trailers:** YouTube trailers are embedded when available.
 - **Favorites:** Persisted in localStorage for a personal touch.
-- **Optimized Search:** You can search with your language, search with filter by year, and search with suggestions.
+- **Optimized Search:** You can search with suggestions.
 - **Favorites:** Persisted in localStorage for a personal touch.
 - **Blacklist:** Adult and unwanted content is filtered out for safety.
 
