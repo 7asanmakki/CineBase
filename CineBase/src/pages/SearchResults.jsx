@@ -38,6 +38,41 @@ function YearFilterBar({ year, onChange }) {
   );
 }
 
+// Expanded keywords for filtering sexual/adult/erotic/romantic content
+const BLOCKED_KEYWORDS = [
+  "desire", "erotic", "sex", "sexual", "seductive", "seduction", "lust", "pleasure", "obsession",
+  "temptation", "affair", "fantasy", "fantasies", "sensual", "intimate", "passion", "steamy",
+  "explicit", "adult", "incest", "taboo", "forbidden", "provocative", "nude", "nudity", "orgy",
+  "thralls", "romance", "romantic", "attractive stranger", "seduce", "seduces", "seduced", "seducing",
+  "affairs", "affection", "flirt", "flirting", "flirtation", "flings", "one night stand", "cheat",
+  "cheating", "cheated", "cheats", "mistress", "lover", "lovers", "sensuality", "arousal", "arouse",
+  "aroused", "arousing", "provocation", "provocative", "tempting", "tempted", "tempts", "infidelity",
+  "adultery", "fornication", "carnal", "libido", "passionate", "seductress", "seductor", "allure",
+  "alluring", "ravish", "ravishing", "ravished", "ravishes", "sultry", "sultriness", "sultrily"
+];
+
+// Helper to filter out unwanted movies
+function filterMovies(movies) {
+  return (movies || []).filter(m => {
+    if (!m) return false;
+    // Remove movies with zero or 1 vote
+    if (!m.vote_count || m.vote_count <= 1) return false;
+    // Remove adult flag
+    if (m.adult) return false;
+    // Remove by keywords in title or overview
+    const title = (m.title || "").toLowerCase();
+    const overview = (m.overview || "").toLowerCase();
+    if (BLOCKED_KEYWORDS.some(word => title.includes(word) || overview.includes(word))) return false;
+    // Remove movies with unknown or empty release date
+    if (!m.release_date || m.release_date.toLowerCase() === "unknown") return false;
+    // Remove movies not in English (original_language !== 'en')
+    if (m.original_language && m.original_language.toLowerCase() !== "en") return false;
+    // Remove movies with no poster
+    if (!m.poster_path) return false;
+    return true;
+  });
+}
+
 export default function SearchResults({ onFavoriteToggle, favorites = [] }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -78,19 +113,26 @@ export default function SearchResults({ onFavoriteToggle, favorites = [] }) {
       try {
         if (results.length > 0) setPageLoading(true); else setLoading(true);
         setError({ isError: false, message: "", type: "" });
+
+        // Only fetch movies by title (no more person search)
         const apiParams = {
           query,
           language: 'en-US',
           page: currentPage,
           include_adult: false,
+          sort_by: 'popularity.desc',
         };
         if (year) apiParams.primary_release_year = year;
         const data = await fetchWithRetry('/search/movie', apiParams);
-        setResults(data.results || []);
+
+        // Filter and sort results
+        let filtered = filterMovies(data.results);
+        filtered = filtered.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+        setResults(filtered);
         setPagination({
           currentPage: data.page || 1,
           totalPages: data.total_pages || 0,
-          totalResults: data.total_results || 0
+          totalResults: filtered.length
         });
         window.scrollTo(0, 0);
       } catch (error) {

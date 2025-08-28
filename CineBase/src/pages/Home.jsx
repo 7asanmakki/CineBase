@@ -39,16 +39,44 @@ export default function Home({ favorites = [], onFavoriteToggle }) {
   const [error, setError] = useState({ isError: false, message: "", type: "" });
   const navigate = useNavigate();
 
+  // Helper to fetch trailer key for a movie (returns trailer key or null)
+  async function getTrailerKey(movieId) {
+    try {
+      const videoData = await fetchWithRetry(`/movie/${movieId}/videos`, { language: 'en-US' });
+      if (videoData && Array.isArray(videoData.results)) {
+        const ytTrailer = videoData.results.find(
+          v => v.site === "YouTube" && v.type === "Trailer"
+        );
+        const ytAny = videoData.results.find(
+          v => v.site === "YouTube"
+        );
+        return ytTrailer?.key || ytAny?.key || null;
+      }
+    } catch {}
+    return null;
+  }
+
   const cleanMovies = (movies) => {
     if (!movies) return [];
     return movies.filter((m) => {
       const title = (m.title || "").toLowerCase();
+      const overview = (m.overview || "").toLowerCase();
       if (!m.poster_path) return false;
       if (m.adult) return false;
       if (BLOCKED_TITLES.includes(title)) return false;
-      if (BLOCKED_KEYWORDS.some((word) => title.includes(word))) return false;
+      if (BLOCKED_KEYWORDS.some((word) => title.includes(word) || overview.includes(word))) return false;
       return true;
     });
+  };
+
+  const filterMoviesWithTrailer = async (movies) => {
+    // Only keep movies that have a trailer
+    const results = [];
+    for (const m of movies) {
+      const trailerKey = await getTrailerKey(m.id);
+      if (trailerKey) results.push(m);
+    }
+    return results;
   };
 
   const fetchSections = async () => {
@@ -71,13 +99,30 @@ export default function Home({ favorites = [], onFavoriteToggle }) {
       // Execute in parallel
       const [trending, topRated, action, drama, cartoons, anime] = await Promise.all(endpoints);
       
+      // Clean and filter movies with trailers for each section
+      const [
+        trendingWithTrailer,
+        topRatedWithTrailer,
+        actionWithTrailer,
+        dramaWithTrailer,
+        cartoonsWithTrailer,
+        animeWithTrailer
+      ] = await Promise.all([
+        filterMoviesWithTrailer(cleanMovies(trending.results)),
+        filterMoviesWithTrailer(cleanMovies(topRated.results)),
+        filterMoviesWithTrailer(cleanMovies(action.results)),
+        filterMoviesWithTrailer(cleanMovies(drama.results)),
+        filterMoviesWithTrailer(cleanMovies(cartoons.results)),
+        filterMoviesWithTrailer(cleanMovies(anime.results))
+      ]);
+
       setSections({
-        trending: cleanMovies(trending.results),
-        topRated: cleanMovies(topRated.results),
-        action: cleanMovies(action.results),
-        drama: cleanMovies(drama.results),
-        cartoons: cleanMovies(cartoons.results), // US cartoons & animations
-        anime: cleanMovies(anime.results),       // Japanese anime
+        trending: trendingWithTrailer,
+        topRated: topRatedWithTrailer,
+        action: actionWithTrailer,
+        drama: dramaWithTrailer,
+        cartoons: cartoonsWithTrailer,
+        anime: animeWithTrailer,
       });
     } catch (error) {
       console.error("Error fetching homepage sections:", error);

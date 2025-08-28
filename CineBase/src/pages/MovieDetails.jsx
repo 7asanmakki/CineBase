@@ -1,8 +1,37 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { fetchWithRetry, ApiError, NetworkError } from "../utils/api";
+import MovieCard from "../components/MovieCard";
 
 const IMG_BASE = "https://image.tmdb.org/t/p/w500";
+
+const BLOCKED_KEYWORDS = [
+  "desire", "erotic", "sex", "sexual", "seductive", "seduction", "lust", "pleasure", "obsession",
+  "temptation", "affair", "fantasy", "fantasies", "sensual", "intimate", "passion", "steamy",
+  "explicit", "adult", "incest", "taboo", "forbidden", "provocative", "nude", "nudity", "orgy",
+  "thralls", "romance", "romantic", "attractive stranger", "seduce", "seduces", "seduced", "seducing",
+  "affairs", "affection", "flirt", "flirting", "flirtation", "flings", "one night stand", "cheat",
+  "cheating", "cheated", "cheats", "mistress", "lover", "lovers", "sensuality", "arousal", "arouse",
+  "aroused", "arousing", "provocation", "provocative", "tempting", "tempted", "tempts", "infidelity",
+  "adultery", "fornication", "carnal", "libido", "passionate", "seductress", "seductor", "allure",
+  "alluring", "ravish", "ravishing", "ravished", "ravishes", "sultry", "sultriness", "sultrily"
+];
+
+function filterRelatedMovies(movies, currentMovieId) {
+  return (movies || []).filter(m => {
+    if (!m) return false;
+    if (m.id === currentMovieId) return false;
+    if (!m.poster_path) return false;
+    if (m.adult) return false;
+    if (!m.vote_count || m.vote_count <= 1) return false;
+    if (!m.release_date || m.release_date.toLowerCase() === "unknown") return false;
+    if (m.original_language && m.original_language.toLowerCase() !== "en") return false;
+    const title = (m.title || "").toLowerCase();
+    const overview = (m.overview || "").toLowerCase();
+    if (BLOCKED_KEYWORDS.some(word => title.includes(word) || overview.includes(word))) return false;
+    return true;
+  });
+}
 
 export default function MovieDetails({ onFavoriteToggle, favorites = [] }) {
   const { id } = useParams();
@@ -10,9 +39,14 @@ export default function MovieDetails({ onFavoriteToggle, favorites = [] }) {
   const [movie, setMovie] = useState(null);
   const [cast, setCast] = useState([]);
   const [ratings, setRatings] = useState([]);
-  const [trailer, setTrailer] = useState(null); // <-- Add trailer state
+  const [director, setDirector] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState({ isError: false, message: "", type: "" });
+  const [trailer, setTrailer] = useState(null);
+
+  // Related movies by director
+  const [relatedMovies, setRelatedMovies] = useState([]);
+  const [relatedLoading, setRelatedLoading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -22,39 +56,26 @@ export default function MovieDetails({ onFavoriteToggle, favorites = [] }) {
 
     const fetchMovieDetails = async () => {
       try {
-        // Fetch movie details
         const movieData = await fetchWithRetry(`/movie/${id}`, { language: 'en-US' });
         if (!mounted) return;
 
-        // Fetch credits (cast)
-        let creditsData = { cast: [] };
+        // Fetch credits (cast & director)
+        let creditsData = { cast: [], crew: [] };
         try {
           creditsData = await fetchWithRetry(`/movie/${id}/credits`, { language: 'en-US' });
         } catch (creditsError) {
           console.warn("Failed to fetch credits:", creditsError);
         }
 
-        // Fetch OMDB ratings if IMDB ID is available
-        let omdbRatings = [];
-        if (movieData.imdb_id) {
-          try {
-            const omdbData = await fetch(
-              `https://www.omdbapi.com/?apikey=${import.meta.env.VITE_OMDB_API_KEY}&i=${movieData.imdb_id}`
-            ).then(r => r.ok ? r.json() : null);
-            if (omdbData && omdbData.Ratings) {
-              omdbRatings = omdbData.Ratings;
-            }
-          } catch (omdbError) {
-            console.warn("Failed to fetch OMDB data:", omdbError);
-          }
-        }
+        // Find director
+        const directorObj = (creditsData.crew || []).find(c => c.job === "Director");
+        setDirector(directorObj);
 
         // Fetch videos (trailers)
         let trailerKey = null;
         try {
           const videoData = await fetchWithRetry(`/movie/${id}/videos`, { language: 'en-US' });
           if (videoData && Array.isArray(videoData.results)) {
-            // Prefer YouTube trailer, fallback to any YouTube video
             const ytTrailer = videoData.results.find(
               v => v.site === "YouTube" && v.type === "Trailer"
             );
@@ -73,8 +94,10 @@ export default function MovieDetails({ onFavoriteToggle, favorites = [] }) {
           const tmdbRating = movieData.vote_average
             ? { Source: "TMDB", Value: `${movieData.vote_average} / 10` }
             : null;
-          setRatings([tmdbRating, ...omdbRatings].filter(Boolean));
+          setRatings([tmdbRating].filter(Boolean));
           setTrailer(trailerKey);
+          // Fetch highly accurate related movies
+          fetchHighlyAccurateRelatedMovies(movieData, creditsData, directorObj);
         }
       } catch (e) {
         console.error("Movie details error:", e);
@@ -88,6 +111,77 @@ export default function MovieDetails({ onFavoriteToggle, favorites = [] }) {
         }
       } finally {
         if (mounted) setLoading(false);
+      }
+    };
+
+    // Fetch related movies that share at least one main actor or the director (and same franchise if possible)
+    const fetchHighlyAccurateRelatedMovies = async (movieData, creditsData, directorObj) => {
+      setRelatedLoading(true);
+      try {
+        let relatedResults = [];
+
+        // 1. By main cast (top 3 actors)
+        const mainCast = (creditsData.cast || []).slice(0, 3);
+        for (const actor of mainCast) {
+          if (!actor.id) continue;
+          const res = await fetchWithRetry('/discover/movie', {
+            with_cast: actor.id,
+            sort_by: 'popularity.desc',
+            language: 'en-US',
+            page: 1
+          });
+          relatedResults = relatedResults.concat(res.results || []);
+        }
+
+        // 2. By director
+        if (directorObj && directorObj.id) {
+          const res = await fetchWithRetry('/discover/movie', {
+            with_crew: directorObj.id,
+            sort_by: 'popularity.desc',
+            language: 'en-US',
+            page: 1
+          });
+          relatedResults = relatedResults.concat(res.results || []);
+        }
+
+        // 3. By collection/franchise (if available)
+        if (movieData.belongs_to_collection && movieData.belongs_to_collection.id) {
+          try {
+            const collectionData = await fetchWithRetry(`/collection/${movieData.belongs_to_collection.id}`, { language: 'en-US' });
+            if (collectionData && Array.isArray(collectionData.parts)) {
+              relatedResults = relatedResults.concat(collectionData.parts);
+            }
+          } catch (e) {
+            // ignore collection errors
+          }
+        }
+
+        // Remove duplicates and filter
+        const unique = {};
+        relatedResults.forEach(m => { if (m && m.id) unique[m.id] = m; });
+        let filtered = filterRelatedMovies(Object.values(unique), movieData.id);
+
+        // Prioritize: 1) same collection, 2) shares both director and actor, 3) shares director, 4) shares actor
+        filtered = filtered.sort((a, b) => {
+          let scoreA = 0, scoreB = 0;
+          // +5 if in same collection
+          if (movieData.belongs_to_collection && a.belongs_to_collection && a.belongs_to_collection.id === movieData.belongs_to_collection.id) scoreA += 5;
+          if (movieData.belongs_to_collection && b.belongs_to_collection && b.belongs_to_collection.id === movieData.belongs_to_collection.id) scoreB += 5;
+          // +2 if same director
+          if (directorObj && a.id !== movieData.id && a.crew && a.crew.some(c => c.id === directorObj.id)) scoreA += 2;
+          if (directorObj && b.id !== movieData.id && b.crew && b.crew.some(c => c.id === directorObj.id)) scoreB += 2;
+          // +1 if shares main cast
+          if (mainCast.some(ac => a.cast && a.cast.some(c => c.id === ac.id))) scoreA += 1;
+          if (mainCast.some(ac => b.cast && b.cast.some(c => c.id === ac.id))) scoreB += 1;
+          // fallback to popularity
+          return scoreB - scoreA || (b.popularity || 0) - (a.popularity || 0);
+        });
+
+        setRelatedMovies(filtered.slice(0, 12));
+      } catch {
+        setRelatedMovies([]);
+      } finally {
+        setRelatedLoading(false);
       }
     };
 
@@ -228,7 +322,7 @@ export default function MovieDetails({ onFavoriteToggle, favorites = [] }) {
             {movie.overview || "No description available."}
           </p>
 
-          {/* --- Trailer Section --- */}
+          {/* --- Trailer Section (restored) --- */}
           <div className="mt-6">
             <h3 className="font-semibold mb-2 text-lg text-gray-900 dark:text-gray-100">Trailer</h3>
             {trailer ? (
@@ -258,6 +352,16 @@ export default function MovieDetails({ onFavoriteToggle, favorites = [] }) {
               {isFavorited ? "★ Remove Favorite" : "☆ Add to Favorites"}
             </button>
           </div>
+
+          {/* --- Director Section (not clickable) --- */}
+          {director && (
+            <div className="mt-4">
+              <h3 className="font-semibold mb-2 text-lg text-gray-900 dark:text-gray-100">
+                Director: <span className="font-normal">{director.name}</span>
+              </h3>
+            </div>
+          )}
+
           <div className="mt-6">
             <h3 className="font-semibold mb-2">Cast</h3>
             <ul className="flex flex-wrap gap-3">
@@ -274,6 +378,27 @@ export default function MovieDetails({ onFavoriteToggle, favorites = [] }) {
           </div>
         </div>
       </div>
+
+      {/* --- Related Movies by Director Section --- */}
+      {relatedMovies.length > 0 && (
+        <div className="mt-10">
+          <h3 className="font-semibold mb-3 text-lg text-gray-900 dark:text-gray-100">
+            Related Movies
+          </h3>
+          <div className="scroll-row flex gap-4 overflow-x-auto pb-2">
+            {relatedMovies.map((rel) => (
+              <div key={rel.id} className="flex-shrink-0 w-32 md:w-40">
+                <MovieCard
+                  movie={rel}
+                  onFavoriteToggle={onFavoriteToggle}
+                  isFavorited={favorites.some(f => f.id === rel.id)}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* --- End Related Movies Section --- */}
     </div>
   );
 }
