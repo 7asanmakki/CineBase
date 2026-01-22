@@ -59,7 +59,7 @@ CineBase is deployed live at [cinebase-three.vercel.app](https://cinebase-three.
 
 1. Clone the repo and install dependencies:
    ```bash
-   git clone https://github.com/7asanmakki/movie-database
+   git clone https://github.com/7asanmakki/CineBase
    cd cinebase
    npm install
    ```
