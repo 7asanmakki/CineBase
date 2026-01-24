@@ -93,6 +93,117 @@ npm run build
 npm run preview  # Preview the production build locally
 ```
 
+---
+
+## 🌐 Deployment
+
+CineBase is deployed on Vercel. To deploy your own instance:
+
+1. **Push to GitHub**
+```bash
+   git add .
+   git commit -m "Your commit message"
+   git push origin main
+```
+
+2. **Import to Vercel**
+   - Go to [vercel.com](https://vercel.com)
+   - Click "New Project"
+   - Import your GitHub repository
+
+3. **Configure Environment Variables**
+   
+   In Vercel dashboard → Settings → Environment Variables, add:
+```
+   VITE_API_KEY = your_tmdb_api_key
+   VITE_API_URL = https://api.themoviedb.org/3
+```
+
+4. **Deploy**
+   
+   Vercel will automatically build and deploy your app!
+
+---
+
+## 🐛 Common Issues & Troubleshooting
+
+### Search Suggestions Not Working (401 Unauthorized)
+
+**Symptom:** When typing in the search bar, you see `401 Unauthorized` errors in the browser console, and suggestions don't appear.
+
+**Cause:** Mismatch between environment variable names in your code and `.env` file.
+
+**Solution:** 
+1. Check your `.env` file contains:
+```env
+   VITE_API_KEY=your_tmdb_api_key_here
+   VITE_API_URL=https://api.themoviedb.org/3
+```
+
+2. Verify your code is using `import.meta.env.VITE_API_KEY` (not `VITE_TMDB_API_KEY`)
+
+3. **Important:** After changing `.env`, you MUST restart your development server:
+```bash
+   # Stop the server (Ctrl+C), then:
+   npm run dev
+```
+
+**Why this happens:** Vite only reads `.env` files when the dev server starts. Changes to `.env` during runtime are not picked up.
+
+---
+
+### Movies Not Loading / API Errors
+
+**Symptom:** Movies don't appear, or you see "Failed to fetch" errors.
+
+**Common causes:**
+
+1. **Missing `/3` in API URL**
+   - ❌ Wrong: `https://api.themoviedb.org`
+   - ✅ Correct: `https://api.themoviedb.org/3`
+
+2. **Invalid or missing API key**
+   - Get a free key at [TMDB API Settings](https://www.themoviedb.org/settings/api)
+   - Make sure there are no extra spaces or quotes in your `.env` file
+
+3. **TMDB API is down**
+   - Check [TMDB Status](https://status.themoviedb.org/)
+
+---
+
+### Deployment Issues on Vercel
+
+**Symptom:** App works locally but breaks after deploying to Vercel.
+
+**Solution:**
+1. Go to Vercel Dashboard → Your Project → Settings → Environment Variables
+2. Add the same variables from your local `.env`:
+```
+   VITE_API_KEY = your_tmdb_api_key
+   VITE_API_URL = https://api.themoviedb.org/3
+```
+3. **Critical:** Redeploy after adding environment variables
+   - Go to Deployments tab
+   - Click "..." on latest deployment
+   - Select "Redeploy"
+
+**Note:** Environment variables in Vercel are separate from your local `.env` file. You must set them in both places.
+
+---
+
+### Theme Not Persisting After Refresh
+
+**Symptom:** You toggle to light/dark mode, but after refreshing the page, it resets.
+
+**Cause:** Browser localStorage might be disabled or blocked.
+
+**Solution:**
+1. Check if localStorage is enabled in your browser settings
+2. Clear browser cache and try again
+3. Check browser console for any localStorage-related errors
+
+If the issue persists, check that Zustand's persist middleware is properly configured in `src/store/index.js`.
+
 ## 📁 Project Structure
 ```
 CineBase/
@@ -186,6 +297,73 @@ The app implements retry logic for failed requests.
 
 ---
 
+## 🎨 Customization
+
+### Theme Colors
+Edit `src/styles/index.css` to customize the color palette:
+```css
+:root {
+  --bg: #f0f2f5;      /* Light mode background */
+  --text: #1f2937;    /* Light mode text */
+  --card: #ffffff;    /* Card background */
+  --muted: #6b7280;   /* Muted text */
+  --brand: #ff4757;   /* Brand accent color */
+  --nav: #ffffff;     /* Navbar background */
+}
+
+html.dark {
+  --bg: #121212;      /* Dark mode background */
+  --text: #f4f4f4;    /* Dark mode text */
+  --card: #1e1e1e;    /* Dark card background */
+  /* ... */
+}
+```
+
+### Content Sections
+Modify `src/pages/Home.jsx` to add or remove movie sections:
+- Change genres via `with_genres` parameter
+- Adjust quality thresholds
+- Modify release date ranges
+- Add custom sorting
+
+---
+
+## 🐛 Troubleshooting
+
+### Search suggestions not working
+- Verify `VITE_API_KEY` is set correctly in `.env`
+- Restart dev server after changing `.env`
+- Check browser console for 401 errors
+
+### Movies not loading
+- Confirm API key is valid
+- Check network connection
+- Verify TMDB API status
+
+### Theme not persisting
+- Check browser localStorage is enabled
+- Clear cache and reload
+- Verify Zustand persist middleware is configured
+
+### Deployment issues on Vercel
+- Ensure environment variables are set in Vercel dashboard
+- Check build logs for errors
+- Verify `package.json` scripts are correct
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+---
+
 ## 📄 License
 
 This project is open source and available under the MIT License.
@@ -217,5 +395,6 @@ This project is open source and available under the MIT License.
 - [Tailwind CSS Docs](https://tailwindcss.com/docs)
 
 ---
+
 
 **Built with ❤️ for movie lovers everywhere 🎬🍿**
