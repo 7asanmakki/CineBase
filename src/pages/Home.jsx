@@ -32,8 +32,8 @@ export default function Home({ favorites = [], onFavoriteToggle }) {
     topRated: [],
     action: [],
     drama: [],
-    cartoons: [], // renamed from anime -> cartoons (US Animation / Cartoons)
-    anime: [],    // NEW: dedicated Japanese anime section
+    cartoons: [],
+    anime: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState({ isError: false, message: "", type: "" });
@@ -56,23 +56,38 @@ export default function Home({ favorites = [], onFavoriteToggle }) {
     return null;
   }
 
-  const cleanMovies = (movies) => {
+  const cleanMovies = (movies, isAnime = false) => {
     if (!movies) return [];
     return movies.filter((m) => {
       const title = (m.title || "").toLowerCase();
       const overview = (m.overview || "").toLowerCase();
+      
+      // Basic filters
       if (!m.poster_path) return false;
       if (m.adult) return false;
       if (BLOCKED_TITLES.includes(title)) return false;
       if (BLOCKED_KEYWORDS.some((word) => title.includes(word) || overview.includes(word))) return false;
+      
+      // Quality filters - stricter for anime
+      if (isAnime) {
+        // Must have decent rating
+        if (!m.vote_average || m.vote_average < 6.5) return false;
+        // Must have significant number of votes (popular anime)
+        if (!m.vote_count || m.vote_count < 100) return false;
+        // Must have decent popularity score
+        if (!m.popularity || m.popularity < 5) return false;
+      }
+      
       return true;
     });
   };
 
   const filterMoviesWithTrailer = async (movies) => {
-    // Only keep movies that have a trailer
+    // Get first 20 movies, filter for trailers, keep up to 16
+    const moviesToCheck = movies.slice(0, 20);
     const results = [];
-    for (const m of movies) {
+    for (const m of moviesToCheck) {
+      if (results.length >= 16) break; // Stop when we have 16
       const trailerKey = await getTrailerKey(m.id);
       if (trailerKey) results.push(m);
     }
@@ -84,22 +99,29 @@ export default function Home({ favorites = [], onFavoriteToggle }) {
       setLoading(true);
       setError({ isError: false, message: "", type: "" });
       
-      // Prepare all fetch promises (now 6 endpoints: trending, topRated, action, drama, cartoons (US), anime (JP))
       const endpoints = [
         fetchWithRetry('/discover/movie', { primary_release_year: '2025', sort_by: 'popularity.desc', language: 'en-US', page: 1 }),
         fetchWithRetry('/movie/top_rated', { language: 'en-US', page: 1 }),
         fetchWithRetry('/discover/movie', { with_genres: '28', sort_by: 'popularity.desc', language: 'en-US', page: 1 }),
         fetchWithRetry('/discover/movie', { with_genres: '18', with_original_language: 'en', sort_by: 'popularity.desc', language: 'en-US', page: 1 }),
-        // Cartoons & Animation (US / English original)
         fetchWithRetry('/discover/movie', { with_genres: '16,10751', with_original_language: 'en', sort_by: 'popularity.desc', language: 'en-US', page: 1 }),
-        // Anime (Japanese original language, animation genre)
-        fetchWithRetry('/discover/movie', { with_genres: '16', with_original_language: 'ja', sort_by: 'popularity.desc', language: 'en-US', page: 1 })
+        // Anime - last 5 years (2020-2025), sorted by vote_count to get most popular
+        fetchWithRetry('/discover/movie', { 
+          with_genres: '16', 
+          with_original_language: 'ja', 
+          sort_by: 'vote_count.desc',
+          'primary_release_date.gte': '2020-01-01',
+          'vote_count.gte': 100,
+          'vote_average.gte': 6.5,
+          'with_runtime.gte': 60,
+          language: 'en-US', 
+          page: 1 
+        })
       ];
       
-      // Execute in parallel
       const [trending, topRated, action, drama, cartoons, anime] = await Promise.all(endpoints);
       
-      // Clean and filter movies with trailers for each section
+      // Clean and filter - pass isAnime=true for anime section
       const [
         trendingWithTrailer,
         topRatedWithTrailer,
@@ -113,7 +135,7 @@ export default function Home({ favorites = [], onFavoriteToggle }) {
         filterMoviesWithTrailer(cleanMovies(action.results)),
         filterMoviesWithTrailer(cleanMovies(drama.results)),
         filterMoviesWithTrailer(cleanMovies(cartoons.results)),
-        filterMoviesWithTrailer(cleanMovies(anime.results))
+        filterMoviesWithTrailer(cleanMovies(anime.results, true)) // isAnime = true
       ]);
 
       setSections({
@@ -127,7 +149,6 @@ export default function Home({ favorites = [], onFavoriteToggle }) {
     } catch (error) {
       console.error("Error fetching homepage sections:", error);
       
-      // Set meaningful error message based on error type
       if (error instanceof NetworkError) {
         setError({
           isError: true,
@@ -142,7 +163,6 @@ export default function Home({ favorites = [], onFavoriteToggle }) {
         });
       }
       
-      // Clear sections
       setSections({
         trending: [],
         topRated: [],
@@ -165,7 +185,7 @@ export default function Home({ favorites = [], onFavoriteToggle }) {
 
   const renderSection = (title, movies) => (
     <section key={title} className="mb-6 md:mb-8">
-      <h2 className="text-lg md:text-xl font-bold mb-2 md:mb-3 tracking-tight text-gray-800 dark:text-gray-100">
+      <h2 className="text-lg md:text-xl font-bold mb-2 md:mb-3 tracking-tight" style={{ color: 'var(--text)' }}>
         {title}
       </h2>
       <div className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 pb-2 snap-x snap-mandatory">
@@ -197,7 +217,6 @@ export default function Home({ favorites = [], onFavoriteToggle }) {
     </section>
   );
 
-  // If there's an error, show it
   if (error.isError) {
     return (
       <div className="p-6 max-w-3xl mx-auto">
@@ -224,8 +243,8 @@ export default function Home({ favorites = [], onFavoriteToggle }) {
 
   return (
     <div className="p-3 md:p-6 max-w-7xl mx-auto">
-      {renderSection("🔥 Trending in 2025", sections.trending)}
       {renderSection("👑 Most Viewed of All Time", sections.topRated)}
+      {renderSection("🔥 Trending", sections.trending)}
       {renderSection("💥 Action Movies", sections.action)}
       {renderSection("🎭 Drama Movies", sections.drama)}
       {renderSection("🎨 Cartoon & Animation", sections.cartoons)}

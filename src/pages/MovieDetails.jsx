@@ -23,9 +23,14 @@ function filterRelatedMovies(movies, currentMovieId) {
     if (m.id === currentMovieId) return false;
     if (!m.poster_path) return false;
     if (m.adult) return false;
-    if (!m.vote_count || m.vote_count <= 1) return false;
+    
+    // Quality filters
+    if (!m.vote_count || m.vote_count <= 50) return false;
+    if (!m.vote_average || m.vote_average < 5.5) return false;
+    
     if (!m.release_date || m.release_date.toLowerCase() === "unknown") return false;
-    if (m.original_language && m.original_language.toLowerCase() !== "en") return false;
+    if (m.original_language && m.original_language.toLowerCase() !== "en" && m.original_language.toLowerCase() !== "ja") return false;
+    
     const title = (m.title || "").toLowerCase();
     const overview = (m.overview || "").toLowerCase();
     if (BLOCKED_KEYWORDS.some(word => title.includes(word) || overview.includes(word))) return false;
@@ -43,8 +48,6 @@ export default function MovieDetails({ onFavoriteToggle, favorites = [] }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState({ isError: false, message: "", type: "" });
   const [trailer, setTrailer] = useState(null);
-
-  // Related movies by director
   const [relatedMovies, setRelatedMovies] = useState([]);
   const [relatedLoading, setRelatedLoading] = useState(false);
 
@@ -67,7 +70,6 @@ export default function MovieDetails({ onFavoriteToggle, favorites = [] }) {
           console.warn("Failed to fetch credits:", creditsError);
         }
 
-        // Find director
         const directorObj = (creditsData.crew || []).find(c => c.job === "Director");
         setDirector(directorObj);
 
@@ -96,8 +98,7 @@ export default function MovieDetails({ onFavoriteToggle, favorites = [] }) {
             : null;
           setRatings([tmdbRating].filter(Boolean));
           setTrailer(trailerKey);
-          // Fetch highly accurate related movies
-          fetchHighlyAccurateRelatedMovies(movieData, creditsData, directorObj);
+          fetchBetterRelatedMovies(movieData);
         }
       } catch (e) {
         console.error("Movie details error:", e);
@@ -114,71 +115,45 @@ export default function MovieDetails({ onFavoriteToggle, favorites = [] }) {
       }
     };
 
-    // Fetch related movies that share at least one main actor or the director (and same franchise if possible)
-    const fetchHighlyAccurateRelatedMovies = async (movieData, creditsData, directorObj) => {
+    // Use TMDB's built-in similar/recommendations endpoints
+    const fetchBetterRelatedMovies = async (movieData) => {
       setRelatedLoading(true);
       try {
-        let relatedResults = [];
-
-        // 1. By main cast (top 3 actors)
-        const mainCast = (creditsData.cast || []).slice(0, 3);
-        for (const actor of mainCast) {
-          if (!actor.id) continue;
-          const res = await fetchWithRetry('/discover/movie', {
-            with_cast: actor.id,
-            sort_by: 'popularity.desc',
-            language: 'en-US',
-            page: 1
-          });
-          relatedResults = relatedResults.concat(res.results || []);
+        // 1. Try similar movies endpoint (most accurate)
+        let similarMovies = [];
+        try {
+          const similar = await fetchWithRetry(`/movie/${id}/similar`, { language: 'en-US', page: 1 });
+          similarMovies = similar.results || [];
+        } catch (e) {
+          console.warn("Similar movies failed:", e);
         }
 
-        // 2. By director
-        if (directorObj && directorObj.id) {
-          const res = await fetchWithRetry('/discover/movie', {
-            with_crew: directorObj.id,
-            sort_by: 'popularity.desc',
-            language: 'en-US',
-            page: 1
-          });
-          relatedResults = relatedResults.concat(res.results || []);
+        // 2. Try recommendations endpoint (also very accurate)
+        let recommendedMovies = [];
+        try {
+          const recommendations = await fetchWithRetry(`/movie/${id}/recommendations`, { language: 'en-US', page: 1 });
+          recommendedMovies = recommendations.results || [];
+        } catch (e) {
+          console.warn("Recommendations failed:", e);
         }
 
-        // 3. By collection/franchise (if available)
-        if (movieData.belongs_to_collection && movieData.belongs_to_collection.id) {
-          try {
-            const collectionData = await fetchWithRetry(`/collection/${movieData.belongs_to_collection.id}`, { language: 'en-US' });
-            if (collectionData && Array.isArray(collectionData.parts)) {
-              relatedResults = relatedResults.concat(collectionData.parts);
-            }
-          } catch (e) {
-            // ignore collection errors
-          }
-        }
-
-        // Remove duplicates and filter
+        // Combine and deduplicate
+        const combined = [...similarMovies, ...recommendedMovies];
         const unique = {};
-        relatedResults.forEach(m => { if (m && m.id) unique[m.id] = m; });
+        combined.forEach(m => { if (m && m.id) unique[m.id] = m; });
+        
         let filtered = filterRelatedMovies(Object.values(unique), movieData.id);
-
-        // Prioritize: 1) same collection, 2) shares both director and actor, 3) shares director, 4) shares actor
+        
+        // Sort by popularity and rating
         filtered = filtered.sort((a, b) => {
-          let scoreA = 0, scoreB = 0;
-          // +5 if in same collection
-          if (movieData.belongs_to_collection && a.belongs_to_collection && a.belongs_to_collection.id === movieData.belongs_to_collection.id) scoreA += 5;
-          if (movieData.belongs_to_collection && b.belongs_to_collection && b.belongs_to_collection.id === movieData.belongs_to_collection.id) scoreB += 5;
-          // +2 if same director
-          if (directorObj && a.id !== movieData.id && a.crew && a.crew.some(c => c.id === directorObj.id)) scoreA += 2;
-          if (directorObj && b.id !== movieData.id && b.crew && b.crew.some(c => c.id === directorObj.id)) scoreB += 2;
-          // +1 if shares main cast
-          if (mainCast.some(ac => a.cast && a.cast.some(c => c.id === ac.id))) scoreA += 1;
-          if (mainCast.some(ac => b.cast && b.cast.some(c => c.id === ac.id))) scoreB += 1;
-          // fallback to popularity
-          return scoreB - scoreA || (b.popularity || 0) - (a.popularity || 0);
+          const scoreA = (a.vote_average || 0) * Math.log10((a.vote_count || 1) + 1) + (a.popularity || 0) / 10;
+          const scoreB = (b.vote_average || 0) * Math.log10((b.vote_count || 1) + 1) + (b.popularity || 0) / 10;
+          return scoreB - scoreA;
         });
 
         setRelatedMovies(filtered.slice(0, 12));
-      } catch {
+      } catch (e) {
+        console.error("Related movies error:", e);
         setRelatedMovies([]);
       } finally {
         setRelatedLoading(false);
@@ -322,7 +297,6 @@ export default function MovieDetails({ onFavoriteToggle, favorites = [] }) {
             {movie.overview || "No description available."}
           </p>
 
-          {/* --- Trailer Section (restored) --- */}
           <div className="mt-6">
             <h3 className="font-semibold mb-2 text-lg text-gray-900 dark:text-gray-100">Trailer</h3>
             {trailer ? (
@@ -341,7 +315,6 @@ export default function MovieDetails({ onFavoriteToggle, favorites = [] }) {
               <div className="text-gray-500 dark:text-gray-400 text-sm">No trailer available.</div>
             )}
           </div>
-          {/* --- End Trailer Section --- */}
 
           <div className="mt-6">
             <button
@@ -353,7 +326,6 @@ export default function MovieDetails({ onFavoriteToggle, favorites = [] }) {
             </button>
           </div>
 
-          {/* --- Director Section (not clickable) --- */}
           {director && (
             <div className="mt-4">
               <h3 className="font-semibold mb-2 text-lg text-gray-900 dark:text-gray-100">
@@ -379,11 +351,10 @@ export default function MovieDetails({ onFavoriteToggle, favorites = [] }) {
         </div>
       </div>
 
-      {/* --- Related Movies by Director Section --- */}
       {relatedMovies.length > 0 && (
         <div className="mt-10">
           <h3 className="font-semibold mb-3 text-lg text-gray-900 dark:text-gray-100">
-            Related Movies
+            You Might Also Like
           </h3>
           <div className="scroll-row flex gap-4 overflow-x-auto pb-2">
             {relatedMovies.map((rel) => (
@@ -398,7 +369,6 @@ export default function MovieDetails({ onFavoriteToggle, favorites = [] }) {
           </div>
         </div>
       )}
-      {/* --- End Related Movies Section --- */}
     </div>
   );
 }

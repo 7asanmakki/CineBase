@@ -2,7 +2,7 @@ import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback } from "react";
 import ThemeToggle from "./ThemeToggle";
 
-const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY;
+const TMDB_API_KEY = import.meta.env.VITE_API_KEY;
 const TMDB_BASE = "https://api.themoviedb.org/3";
 
 export default function Navbar({ favoritesCount = 0 }) {
@@ -40,6 +40,24 @@ export default function Navbar({ favoritesCount = 0 }) {
     }
   };
 
+  // Filter suggestions to only show quality movies
+  const filterSuggestions = (movies) => {
+    return movies.filter(m => {
+      // Must have poster
+      if (!m.poster_path) return false;
+      // Must have a rating (vote_average)
+      if (!m.vote_average || m.vote_average === 0) return false;
+      // Must have at least some votes (to avoid obscure titles)
+      if (!m.vote_count || m.vote_count < 10) return false;
+      // Must have a release date
+      if (!m.release_date) return false;
+      return true;
+    }).sort((a, b) => {
+      // Sort by popularity (higher is better)
+      return (b.popularity || 0) - (a.popularity || 0);
+    });
+  };
+
   // fetch suggestions (simple TMDB search)
   const fetchSuggestions = useCallback(
     async (q) => {
@@ -58,7 +76,10 @@ export default function Navbar({ favoritesCount = 0 }) {
         const res = await fetch(url, { signal: abortRef.current.signal });
         if (!res.ok) throw new Error("Failed");
         const data = await res.json();
-        setSuggestions((data.results || []).slice(0, 7));
+        
+        // Filter and get top 7 quality results
+        const filtered = filterSuggestions(data.results || []);
+        setSuggestions(filtered.slice(0, 7));
       } catch (e) {
         if (e.name !== "AbortError") {
           console.error("Suggestion fetch error:", e);
@@ -139,7 +160,7 @@ export default function Navbar({ favoritesCount = 0 }) {
   }, []);
 
   return (
-    <nav className="sticky top-0 z-50 w-full bg-gray-100 dark:bg-gray-900 shadow-md">
+    <nav className="sticky top-0 z-50 w-full bg-white dark:bg-gray-900 shadow-md">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-2 md:gap-0 px-3 md:px-6 py-2 md:py-0">
         {/* Left: Logo */}
         <div className="flex items-center gap-3 flex-shrink-0 py-2 md:py-0">
@@ -206,16 +227,9 @@ export default function Navbar({ favoritesCount = 0 }) {
                     }`}
                   >
                     <img
-                      src={
-                        s.poster_path
-                          ? `https://image.tmdb.org/t/p/w92${s.poster_path}`
-                          : "https://placehold.co/92x138?text=No+Img"
-                      }
+                      src={`https://image.tmdb.org/t/p/w92${s.poster_path}`}
                       alt={s.title}
                       className="w-10 h-14 object-cover rounded flex-shrink-0"
-                      onError={(e) => {
-                        e.currentTarget.src = "https://placehold.co/92x138?text=No+Img";
-                      }}
                     />
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight" title={s.title}>
@@ -223,11 +237,9 @@ export default function Navbar({ favoritesCount = 0 }) {
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400 flex gap-2 mt-1">
                         <span>{s.release_date ? s.release_date.slice(0, 4) : "Unknown"}</span>
-                        {typeof s.vote_average === "number" && (
-                          <span className="inline-block bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-2 py-0.5 rounded text-xs font-semibold">
-                            {Number(s.vote_average).toFixed(1)}
-                          </span>
-                        )}
+                        <span className="inline-block bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-2 py-0.5 rounded text-xs font-semibold">
+                          ⭐ {Number(s.vote_average).toFixed(1)}
+                        </span>
                       </div>
                     </div>
                   </li>

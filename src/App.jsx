@@ -14,6 +14,18 @@ export default function App() {
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
   const isOnline = useAppStore((state) => state.isOnline);
   const setIsOnline = useAppStore((state) => state.setIsOnline);
+  
+  // Get theme state from store
+  const isDarkMode = useThemeStore((state) => state.isDarkMode);
+
+  // Apply theme on mount and whenever it changes
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [isDarkMode]);
 
   // Set up online/offline detection
   useEffect(() => {
@@ -28,12 +40,6 @@ export default function App() {
       window.removeEventListener('offline', handleOffline);
     };
   }, [setIsOnline]);
-
-  // Force dark mode always
-  useEffect(() => {
-    document.documentElement.classList.add("dark");
-    localStorage.setItem("theme", "dark");
-  }, []);
 
   return (
     <ErrorBoundary>

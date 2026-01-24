@@ -1,14 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #f4f4f4;
-  --text: #222;
-  --card: #fff;
+  --bg: #f0f2f5;
+  --text: #1f2937;
+  --card: #ffffff;
   --muted: #6b7280;
   --brand: #ff4757;
-  --nav: #111;
+  --nav: #ffffff;
 }
-
 html.dark {
   --bg: #121212;
   --text: #f4f4f4;
