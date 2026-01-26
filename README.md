@@ -127,6 +127,8 @@ CineBase is deployed on Vercel. To deploy your own instance:
 
 ## 🐛 Common Issues & Troubleshooting
 
+**If you run into setup or deployment issues, start here.**
+
 ### Search Suggestions Not Working (401 Unauthorized)
 
 **Symptom:** When typing in the search bar, you see `401 Unauthorized` errors in the browser console, and suggestions don't appear.
@@ -142,7 +144,7 @@ CineBase is deployed on Vercel. To deploy your own instance:
 
 2. Verify your code is using `import.meta.env.VITE_API_KEY` (not `VITE_TMDB_API_KEY`)
 
-3. **Important:** After changing `.env`, you MUST restart your development server:
+3. **Important:** Restart your development server after changing `.env`:
 ```bash
    # Stop the server (Ctrl+C), then:
    npm run dev
@@ -164,7 +166,7 @@ CineBase is deployed on Vercel. To deploy your own instance:
 
 2. **Invalid or missing API key**
    - Get a free key at [TMDB API Settings](https://www.themoviedb.org/settings/api)
-   - Make sure there are no extra spaces or quotes in your `.env` file
+   - Verify there are no extra spaces or quotes in your `.env` file
 
 3. **TMDB API is down**
    - Check [TMDB Status](https://status.themoviedb.org/)
@@ -183,8 +185,8 @@ CineBase is deployed on Vercel. To deploy your own instance:
    VITE_API_URL = https://api.themoviedb.org/3
 ```
 3. **Critical:** Redeploy after adding environment variables
-   - Go to Deployments tab
-   - Click "..." on latest deployment
+   - Navigate to Deployments tab
+   - Click "..." on the latest deployment
    - Select "Redeploy"
 
 **Note:** Environment variables in Vercel are separate from your local `.env` file. You must set them in both places.
@@ -202,7 +204,9 @@ CineBase is deployed on Vercel. To deploy your own instance:
 2. Clear browser cache and try again
 3. Check browser console for any localStorage-related errors
 
-If the issue persists, check that Zustand's persist middleware is properly configured in `src/store/index.js`.
+If the issue persists, verify that Zustand's persist middleware is properly configured in `src/store/index.js`.
+
+---
 
 ## 📁 Project Structure
 ```
@@ -328,30 +332,6 @@ Modify `src/pages/Home.jsx` to add or remove movie sections:
 
 ---
 
-## 🐛 Troubleshooting
-
-### Search suggestions not working
-- Verify `VITE_API_KEY` is set correctly in `.env`
-- Restart dev server after changing `.env`
-- Check browser console for 401 errors
-
-### Movies not loading
-- Confirm API key is valid
-- Check network connection
-- Verify TMDB API status
-
-### Theme not persisting
-- Check browser localStorage is enabled
-- Clear cache and reload
-- Verify Zustand persist middleware is configured
-
-### Deployment issues on Vercel
-- Ensure environment variables are set in Vercel dashboard
-- Check build logs for errors
-- Verify `package.json` scripts are correct
-
----
-
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
@@ -395,6 +375,5 @@ This project is open source and available under the MIT License.
 - [Tailwind CSS Docs](https://tailwindcss.com/docs)
 
 ---
-
 
 **Built with ❤️ for movie lovers everywhere 🎬🍿**
